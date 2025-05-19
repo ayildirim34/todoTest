@@ -1,30 +1,39 @@
-name: Playwright Tests
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
 
-on:
-  push:
-    branches: [main, dev]
-  pull_request:
-    branches: [main, dev]
+trigger:
+- main
 
-jobs:
-  test:
-    name: Run Playwright tests
-    runs-on: ubuntu-latest
+pool:
+  vmImage: ubuntu-latest #windows-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSource: 'spec'
+    versionSpec: '20.x'
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
+- script: npm ci
+  displayName: 'Install Playwright Deps'
 
-      - name: Install dependencies
-        run: npm install
+- script: npx playwright install --with-deps
+  displayName: 'Install Playwright Browsers'
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+- script: npx playwright test --project=$(browser) --grep=$(tagName)
+  displayName: 'Start execution From GitRepo'
 
-      - name: Run Playwright tests
-        run: npx playwright test
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: 'playwright-report'
+    artifact: 'Playwright HTML Report'
+    publishLocation: 'pipeline'
+  condition: always()
+
+- task: PublishTestResults@2
+  inputs:
+    testResultsFormat: 'JUnit'
+    testResultsFiles: '**/PlaywrightJunitReport.xml'
+    testRunTitle: 'Junit Reporter'
+  condition: always()
